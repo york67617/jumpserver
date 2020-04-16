@@ -300,7 +300,8 @@ class AssetPermissionUtil(AssetPermissionUtilCacheMixin):
             if child.identifier.startswith('-'):
                 continue
             ancestors = self.full_tree.ancestors(
-                child.identifier, with_self=False, deep=True
+                child.identifier, with_self=False, deep=True,
+                with_assets=False,
             )
             if not ancestors:
                 continue
