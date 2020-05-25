@@ -38,7 +38,7 @@ class RemoteAppPermissionViewSet(OrgModelViewSet):
             return super().get_serializer_class()
 
     @action(methods=[GET], detail=True, url_path='users/all')
-    def all_users(self):
+    def all_users(self, request, *args, **kwargs):
         obj = self.get_object()
         users = obj.all_users.only(
             *self.get_serializer_class().Meta.only_fields
