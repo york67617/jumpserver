@@ -7,6 +7,7 @@ from .. import api
 
 router = BulkRouter()
 router.register('remote-app-permissions', api.RemoteAppPermissionViewSet, 'remote-app-permission')
+router.register('remote-app-permissions-users-relations', api.RemoteAppPermissionUserRelationViewSet, 'remote-app-permissions-users-relation')
 
 remote_app_permission_urlpatterns = [
     # 查询用户授权的RemoteApp
