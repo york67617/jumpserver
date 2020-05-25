@@ -86,11 +86,11 @@ class BasePermission(OrgModelMixin):
         users_query = self._meta.get_field('users').related_query_name()
         user_groups_query = self._meta.get_field('user_groups').related_query_name()
 
-        users_q = Q({
+        users_q = Q(**{
             f'{users_query}': self
         })
 
-        user_groups_q = Q({
+        user_groups_q = Q(**{
             f'groups__{user_groups_query}': self
         })
 
