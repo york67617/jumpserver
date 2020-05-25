@@ -15,6 +15,7 @@ __all__ = [
     'DatabaseAppPermissionDatabaseAppRelationSerializer',
     'DatabaseAppPermissionAllDatabaseAppSerializer',
     'DatabaseAppPermissionSystemUserRelationSerializer',
+    'PermissionAllUserSerializer',
 ]
 
 
@@ -50,7 +51,7 @@ class DatabaseAppPermissionUserGroupRelationSerializer(RelationMixin, serializer
         ]
 
 
-class DatabaseAppPermissionAllUserSerializer(serializers.Serializer):
+class PermissionAllUserSerializer(serializers.Serializer):
     user = serializers.UUIDField(read_only=True, source='id')
     user_display = serializers.SerializerMethodField()
 
@@ -60,6 +61,11 @@ class DatabaseAppPermissionAllUserSerializer(serializers.Serializer):
     @staticmethod
     def get_user_display(obj):
         return str(obj)
+
+
+class DatabaseAppPermissionAllUserSerializer(PermissionAllUserSerializer):
+    class Meta(PermissionAllUserSerializer.Meta):
+        pass
 
 
 class DatabaseAppPermissionDatabaseAppRelationSerializer(RelationMixin, serializers.ModelSerializer):
