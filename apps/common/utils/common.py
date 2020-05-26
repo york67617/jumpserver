@@ -199,15 +199,11 @@ logger = get_logger(__name__)
 
 def timeit(func):
     def wrapper(*args, **kwargs):
-        if hasattr(func, '__name__'):
-            name = func.__name__
-        else:
-            name = func
-        logger.debug("Start call: {}".format(name))
+        logger.debug("Start call: {}".format(func.__name__))
         now = time.time()
         result = func(*args, **kwargs)
         using = (time.time() - now) * 1000
-        msg = "End call {}, using: {:.1f}ms".format(name, using)
+        msg = "End call {}, using: {:.1f}ms".format(func.__name__, using)
         logger.debug(msg)
         return result
     return wrapper

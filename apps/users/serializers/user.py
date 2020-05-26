@@ -17,13 +17,7 @@ __all__ = [
 ]
 
 
-class UserOrgSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    name = serializers.CharField()
-
-
 class UserSerializer(BulkSerializerMixin, serializers.ModelSerializer):
-    admin_or_audit_orgs = UserOrgSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
@@ -33,8 +27,7 @@ class UserSerializer(BulkSerializerMixin, serializers.ModelSerializer):
             'groups', 'role', 'wechat', 'phone', 'mfa_level',
             'comment', 'source', 'is_valid', 'is_expired',
             'is_active', 'created_by', 'is_first_login',
-            'date_password_last_updated', 'date_expired',
-            'avatar_url', 'admin_or_audit_orgs',
+            'date_password_last_updated', 'date_expired', 'avatar_url',
         ]
         extra_kwargs = {
             'password': {'write_only': True, 'required': False, 'allow_null': True, 'allow_blank': True},
@@ -81,17 +74,8 @@ class UserSerializer(BulkSerializerMixin, serializers.ModelSerializer):
             attrs['password_raw'] = password
         return attrs
 
-    @staticmethod
-    def clean_auth_fields(attrs):
-        for field in ('password', 'public_key'):
-            value = attrs.get(field)
-            if not value:
-                attrs.pop(field, None)
-        return attrs
-
     def validate(self, attrs):
         attrs = self.change_password_to_raw(attrs)
-        attrs = self.clean_auth_fields(attrs)
         return attrs
 
 

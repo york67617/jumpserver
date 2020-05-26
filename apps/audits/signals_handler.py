@@ -111,10 +111,12 @@ def on_audits_log_create(sender, instance=None, **kwargs):
 
 def generate_data(username, request):
     user_agent = request.META.get('HTTP_USER_AGENT', '')
-    login_ip = get_request_ip(request) or '0.0.0.0'
+
     if isinstance(request, Request):
-        login_type = request.META.get('HTTP_X_JMS_LOGIN_TYPE', '')
+        login_ip = request.data.get('remote_addr', '0.0.0.0')
+        login_type = request.data.get('login_type', '')
     else:
+        login_ip = get_request_ip(request) or '0.0.0.0'
         login_type = 'W'
 
     data = {
@@ -136,8 +138,8 @@ def on_user_auth_success(sender, user, request, **kwargs):
 
 
 @receiver(post_auth_failed)
-def on_user_auth_failed(sender, username, request, reason='', **kwargs):
+def on_user_auth_failed(sender, username, request, reason, **kwargs):
     logger.debug('User login failed: {}'.format(username))
     data = generate_data(username, request)
-    data.update({'reason': reason[:128], 'status': False})
+    data.update({'reason': reason, 'status': False})
     write_login_log(**data)

@@ -8,23 +8,39 @@ from common.serializers import AdaptedBulkListSerializer
 from orgs.mixins.serializers import BulkOrgResourceModelSerializer
 from ..models import AuthBook, Asset
 from ..backends import AssetUserManager
-
 from .base import ConnectivitySerializer, AuthSerializerMixin
 
 
 __all__ = [
-    'AssetUserWriteSerializer', 'AssetUserReadSerializer',
-    'AssetUserAuthInfoSerializer', 'AssetUserPushSerializer',
+    'AssetUserSerializer', 'AssetUserAuthInfoSerializer',
+    'AssetUserExportSerializer', 'AssetUserPushSerializer',
 ]
 
 
-class AssetUserWriteSerializer(AuthSerializerMixin, BulkOrgResourceModelSerializer):
+class BasicAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Asset
+        fields = ['hostname', 'ip']
+
+
+class AssetUserSerializer(AuthSerializerMixin, BulkOrgResourceModelSerializer):
+    hostname = serializers.CharField(read_only=True, label=_("Hostname"))
+    ip = serializers.CharField(read_only=True, label=_("IP"))
+    connectivity = ConnectivitySerializer(read_only=True, label=_("Connectivity"))
+
+    backend = serializers.CharField(read_only=True, label=_("Backend"))
+
     class Meta:
         model = AuthBook
         list_serializer_class = AdaptedBulkListSerializer
+        read_only_fields = (
+            'date_created', 'date_updated', 'created_by',
+            'is_latest', 'version', 'connectivity',
+        )
         fields = [
-            'id', 'username', 'password', 'private_key', "public_key",
-            'asset', 'comment',
+            "id", "hostname", "ip", "username", "password", "asset", "version",
+            "is_latest", "connectivity", "backend",
+            "date_created", "date_updated", "private_key", "public_key",
         ]
         extra_kwargs = {
             'username': {'required': True},
@@ -37,35 +53,11 @@ class AssetUserWriteSerializer(AuthSerializerMixin, BulkOrgResourceModelSerializ
         if not validated_data.get("name") and validated_data.get("username"):
             validated_data["name"] = validated_data["username"]
         instance = AssetUserManager.create(**validated_data)
+        instance.set_to_latest()
         return instance
 
 
-class AssetUserReadSerializer(AssetUserWriteSerializer):
-    id = serializers.CharField(read_only=True, source='union_id', label=_("ID"))
-    hostname = serializers.CharField(read_only=True, label=_("Hostname"))
-    ip = serializers.CharField(read_only=True, label=_("IP"))
-    asset = serializers.CharField(source='asset_id', label=_('Asset'))
-    backend = serializers.CharField(read_only=True, label=_("Backend"))
-
-    class Meta(AssetUserWriteSerializer.Meta):
-        read_only_fields = (
-            'date_created', 'date_updated',
-            'created_by', 'version',
-        )
-        fields = [
-            'id', 'username', 'password', 'private_key', "public_key",
-            'asset', 'hostname', 'ip', 'backend', 'version',
-            'date_created', "date_updated", 'comment',
-        ]
-        extra_kwargs = {
-            'username': {'required': True},
-            'password': {'write_only': True},
-            'private_key': {'write_only': True},
-            'public_key': {'write_only': True},
-        }
-
-
-class AssetUserAuthInfoSerializer(AssetUserReadSerializer):
+class AssetUserExportSerializer(AssetUserSerializer):
     password = serializers.CharField(
         max_length=256, allow_blank=True, allow_null=True,
         required=False, label=_('Password')
@@ -78,6 +70,12 @@ class AssetUserAuthInfoSerializer(AssetUserReadSerializer):
         max_length=4096, allow_blank=True, allow_null=True,
         required=False, label=_('Private key')
     )
+
+
+class AssetUserAuthInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuthBook
+        fields = ['password', 'private_key', 'public_key']
 
 
 class AssetUserPushSerializer(serializers.Serializer):

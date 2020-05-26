@@ -1,25 +1,29 @@
 # -*- coding: utf-8 -*-
 #
 
+import os
 import json
+import jms_storage
 
 from smtplib import SMTPSenderRefused
 from rest_framework import generics
 from rest_framework.views import Response, APIView
 from django.conf import settings
-from django.core.mail import send_mail, get_connection
+from django.core.mail import send_mail
 from django.utils.translation import ugettext_lazy as _
 
+from .models import Setting
 from .utils import (
     LDAPServerUtil, LDAPCacheUtil, LDAPImportUtil, LDAPSyncUtil,
-    LDAP_USE_CACHE_FLAGS, LDAPTestUtil,
+    LDAP_USE_CACHE_FLAGS
+
 )
 from .tasks import sync_ldap_user_task
 from common.permissions import IsOrgAdmin, IsSuperUser
 from common.utils import get_logger
 from .serializers import (
-    MailTestSerializer, LDAPTestConfigSerializer, LDAPUserSerializer,
-    PublicSettingSerializer, LDAPTestLoginSerializer,
+    MailTestSerializer, LDAPTestSerializer, LDAPUserSerializer,
+    PublicSettingSerializer,
 )
 from users.models import User
 
@@ -35,33 +39,18 @@ class MailTestingAPI(APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            email_host = serializer.validated_data['EMAIL_HOST']
-            email_port = serializer.validated_data['EMAIL_PORT']
-            email_host_user = serializer.validated_data["EMAIL_HOST_USER"]
-            email_host_password = serializer.validated_data['EMAIL_HOST_PASSWORD']
             email_from = serializer.validated_data["EMAIL_FROM"]
             email_recipient = serializer.validated_data["EMAIL_RECIPIENT"]
-            email_use_ssl = serializer.validated_data['EMAIL_USE_SSL']
-            email_use_tls = serializer.validated_data['EMAIL_USE_TLS']
-
-            # 设置 settings 的值，会导致动态配置在当前进程失效
-            # for k, v in serializer.validated_data.items():
-            #     if k.startswith('EMAIL'):
-            #         setattr(settings, k, v)
+            email_host_user = serializer.validated_data["EMAIL_HOST_USER"]
+            for k, v in serializer.validated_data.items():
+                if k.startswith('EMAIL'):
+                    setattr(settings, k, v)
             try:
                 subject = "Test"
                 message = "Test smtp setting"
                 email_from = email_from or email_host_user
                 email_recipient = email_recipient or email_from
-                connection = get_connection(
-                    host=email_host, port=email_port,
-                    uesrname=email_host_user, password=email_host_password,
-                    use_tls=email_use_tls, use_ssl=email_use_ssl,
-                )
-                send_mail(
-                    subject, message,  email_from, [email_recipient],
-                    connection=connection
-                )
+                send_mail(subject, message,  email_from, [email_recipient])
             except SMTPSenderRefused as e:
                 resp = e.smtp_error
                 if isinstance(resp, bytes):
@@ -81,18 +70,10 @@ class MailTestingAPI(APIView):
             return Response({"error": str(serializer.errors)}, status=401)
 
 
-class LDAPTestingConfigAPI(APIView):
+class LDAPTestingAPI(APIView):
     permission_classes = (IsSuperUser,)
-    serializer_class = LDAPTestConfigSerializer
-
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        if not serializer.is_valid():
-            return Response({"error": str(serializer.errors)}, status=401)
-        config = self.get_ldap_config(serializer)
-        ok, msg = LDAPTestUtil(config).test_config()
-        status = 200 if ok else 401
-        return Response(msg, status=status)
+    serializer_class = LDAPTestSerializer
+    success_message = _("Test ldap success")
 
     @staticmethod
     def get_ldap_config(serializer):
@@ -100,36 +81,39 @@ class LDAPTestingConfigAPI(APIView):
         bind_dn = serializer.validated_data["AUTH_LDAP_BIND_DN"]
         password = serializer.validated_data["AUTH_LDAP_BIND_PASSWORD"]
         use_ssl = serializer.validated_data.get("AUTH_LDAP_START_TLS", False)
-        search_ou = serializer.validated_data["AUTH_LDAP_SEARCH_OU"]
+        search_ougroup = serializer.validated_data["AUTH_LDAP_SEARCH_OU"]
         search_filter = serializer.validated_data["AUTH_LDAP_SEARCH_FILTER"]
         attr_map = serializer.validated_data["AUTH_LDAP_USER_ATTR_MAP"]
-        auth_ldap = serializer.validated_data.get('AUTH_LDAP', False)
         config = {
             'server_uri': server_uri,
             'bind_dn': bind_dn,
             'password': password,
             'use_ssl': use_ssl,
-            'search_ou': search_ou,
+            'search_ougroup': search_ougroup,
             'search_filter': search_filter,
-            'attr_map': attr_map,
-            'auth_ldap': auth_ldap
+            'attr_map': json.loads(attr_map),
         }
         return config
-
-
-class LDAPTestingLoginAPI(APIView):
-    permission_classes = (IsSuperUser,)
-    serializer_class = LDAPTestLoginSerializer
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():
             return Response({"error": str(serializer.errors)}, status=401)
-        username = serializer.validated_data['username']
-        password = serializer.validated_data['password']
-        ok, msg = LDAPTestUtil().test_login(username, password)
-        status = 200 if ok else 401
-        return Response(msg, status=status)
+
+        attr_map = serializer.validated_data["AUTH_LDAP_USER_ATTR_MAP"]
+        try:
+            json.loads(attr_map)
+        except json.JSONDecodeError:
+            return Response({"error": _("LDAP attr map not valid")}, status=401)
+
+        config = self.get_ldap_config(serializer)
+        util = LDAPServerUtil(config=config)
+        try:
+            users = util.search()
+        except Exception as e:
+            return Response({"error": str(e)}, status=401)
+
+        return Response({"msg": _("Match {} s users").format(len(users))})
 
 
 class LDAPUserListApi(generics.ListAPIView):
@@ -266,10 +250,11 @@ class PublicSettingApi(generics.RetrieveAPIView):
     serializer_class = PublicSettingSerializer
 
     def get_object(self):
+        c = settings.CONFIG
         instance = {
             "data": {
-                "WINDOWS_SKIP_ALL_MANUAL_PASSWORD": settings.WINDOWS_SKIP_ALL_MANUAL_PASSWORD,
-                "SECURITY_MAX_IDLE_TIME": settings.SECURITY_MAX_IDLE_TIME,
+                "WINDOWS_SKIP_ALL_MANUAL_PASSWORD": c.WINDOWS_SKIP_ALL_MANUAL_PASSWORD,
+                "SECURITY_MAX_IDLE_TIME": c.SECURITY_MAX_IDLE_TIME,
             }
         }
         return instance

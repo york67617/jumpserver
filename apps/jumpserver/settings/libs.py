@@ -53,7 +53,6 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     },
-    'DEFAULT_INFO': 'jumpserver.views.swagger.api_info',
 }
 
 

@@ -27,29 +27,25 @@ class LDAPAuthorizationBackend(LDAPBackend):
         is_valid = getattr(user, 'is_valid', None)
         return is_valid or is_valid is None
 
-    def pre_check(self, username, password):
+    def pre_check(self, username):
         if not settings.AUTH_LDAP:
-            error = 'Not enabled auth ldap'
-            return False, error
+            return False
+        logger.info('Authentication LDAP backend')
         if not username:
-            error = 'Username is None'
-            return False, error
-        if not password:
-            error = 'Password is None'
-            return False, error
+            logger.info('Authenticate failed: username is None')
+            return False
         if settings.AUTH_LDAP_USER_LOGIN_ONLY_IN_USERS:
             user_model = self.get_user_model()
             exist = user_model.objects.filter(username=username).exists()
             if not exist:
-                error = 'user ({}) is not in the user list'.format(username)
-                return False, error
-        return True, ''
+                msg = 'Authentication failed: user ({}) is not in the user list'
+                logger.info(msg.format(username))
+                return False
+        return True
 
     def authenticate(self, request=None, username=None, password=None, **kwargs):
-        logger.info('Authentication LDAP backend')
-        match, msg = self.pre_check(username, password)
+        match = self.pre_check(username)
         if not match:
-            logger.info('Authenticate failed: {}'.format(msg))
             return None
         ldap_user = LDAPUser(self, username=username.strip(), request=request)
         user = self.authenticate_ldap_user(ldap_user, password)
@@ -131,5 +127,5 @@ class LDAPUser(_LDAPUser):
                 setattr(self._user, field, value)
 
         email = getattr(self._user, 'email', '')
-        email = construct_user_email(self._user.username, email)
+        email = construct_user_email(email, self._user.username)
         setattr(self._user, 'email', email)

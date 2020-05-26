@@ -90,14 +90,6 @@ class Terminal(models.Model):
         config = self.get_replay_storage_config()
         return {"TERMINAL_REPLAY_STORAGE": config}
 
-    @staticmethod
-    def get_login_title_setting():
-        login_title = None
-        if settings.XPACK_ENABLED:
-            from xpack.plugins.interface.models import Interface
-            login_title = Interface.get_login_title()
-        return {'TERMINAL_HEADER_TITLE': login_title}
-
     @property
     def config(self):
         configs = {}
@@ -107,7 +99,6 @@ class Terminal(models.Model):
             configs[k] = getattr(settings, k)
         configs.update(self.get_command_storage_setting())
         configs.update(self.get_replay_storage_setting())
-        configs.update(self.get_login_title_setting())
         configs.update({
             'SECURITY_MAX_IDLE_TIME': settings.SECURITY_MAX_IDLE_TIME
         })
@@ -190,8 +181,7 @@ class Session(OrgModelMixin):
     system_user_id = models.CharField(blank=True, default='', max_length=36, db_index=True)
     login_from = models.CharField(max_length=2, choices=LOGIN_FROM_CHOICES, default="ST")
     remote_addr = models.CharField(max_length=128, verbose_name=_("Remote addr"), blank=True, null=True)
-    is_success = models.BooleanField(default=True, db_index=True)
-    is_finished = models.BooleanField(default=False, db_index=True)
+    is_finished = models.BooleanField(default=False)
     has_replay = models.BooleanField(default=False, verbose_name=_("Replay"))
     has_command = models.BooleanField(default=False, verbose_name=_("Command"))
     terminal = models.ForeignKey(Terminal, null=True, on_delete=models.SET_NULL)
@@ -243,14 +233,6 @@ class Session(OrgModelMixin):
             return True
         return False
 
-    @property
-    def can_join(self):
-        if self.is_finished:
-            return False
-        if self.protocol not in ['ssh', 'telnet', 'mysql']:
-            return False
-        return True
-
     def save_to_storage(self, f):
         local_path = self.get_local_path()
         try:
@@ -282,48 +264,6 @@ class Session(OrgModelMixin):
     @property
     def login_from_display(self):
         return self.get_login_from_display()
-
-    @classmethod
-    def generate_fake(cls, count=100, is_finished=True):
-        import random
-        from orgs.models import Organization
-        from users.models import User
-        from assets.models import Asset, SystemUser
-        from orgs.utils import get_current_org
-        from common.utils.random import random_datetime, random_ip
-
-        org = get_current_org()
-        if not org or not org.is_real():
-            Organization.default().change_to()
-        i = 0
-        users = User.objects.all()[:100]
-        assets = Asset.objects.all()[:100]
-        system_users = SystemUser.objects.all()[:100]
-        while i < count:
-            user_random = random.choices(users, k=10)
-            assets_random = random.choices(assets, k=10)
-            system_users = random.choices(system_users, k=10)
-
-            ziped = zip(user_random, assets_random, system_users)
-            sessions = []
-            now = timezone.now()
-            month_ago = now - timezone.timedelta(days=30)
-            for user, asset, system_user in ziped:
-                ip = random_ip()
-                date_start = random_datetime(month_ago, now)
-                date_end = random_datetime(date_start, date_start+timezone.timedelta(hours=2))
-                data = dict(
-                    user=str(user), user_id=user.id,
-                    asset=str(asset), asset_id=asset.id,
-                    system_user=str(system_user), system_user_id=system_user.id,
-                    remote_addr=ip,
-                    date_start=date_start,
-                    date_end=date_end,
-                    is_finished=is_finished,
-                )
-                sessions.append(Session(**data))
-            cls.objects.bulk_create(sessions)
-            i += 10
 
     class Meta:
         db_table = "terminal_session"
@@ -422,23 +362,18 @@ class ReplayStorage(CommonModelMixin):
         return self.name
 
     def convert_type(self):
-        s3_type_list = [const.REPLAY_STORAGE_TYPE_CEPH]
+        s3_type_list = [
+            const.REPLAY_STORAGE_TYPE_CEPH, const.REPLAY_STORAGE_TYPE_SWIFT
+        ]
         tp = self.type
         if tp in s3_type_list:
             tp = const.REPLAY_STORAGE_TYPE_S3
         return tp
 
-    def get_extra_config(self):
-        extra_config = {'TYPE': self.convert_type()}
-        if self.type == const.REPLAY_STORAGE_TYPE_SWIFT:
-            extra_config.update({'signer': 'S3SignerType'})
-        return extra_config
-
     @property
     def config(self):
         config = self.meta
-        extra_config = self.get_extra_config()
-        config.update(extra_config)
+        config.update({'TYPE': self.convert_type()})
         return config
 
     def in_defaults(self):

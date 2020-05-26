@@ -10,7 +10,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from orgs.mixins.models import OrgModelMixin
-from .base import BaseUser
+from .base import AssetUser
 
 __all__ = ['Domain', 'Gateway']
 
@@ -39,7 +39,7 @@ class Domain(OrgModelMixin):
         return random.choice(self.gateways)
 
 
-class Gateway(BaseUser):
+class Gateway(AssetUser):
     PROTOCOL_SSH = 'ssh'
     PROTOCOL_RDP = 'rdp'
     PROTOCOL_CHOICES = (

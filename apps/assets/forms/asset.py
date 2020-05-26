@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 #
-from itertools import groupby
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from common.utils import get_logger
 from orgs.mixins.forms import OrgModelForm
 
-from ..models import Asset, Platform
+from ..models import Asset
 
 
 logger = get_logger(__file__)
@@ -43,26 +42,9 @@ class AssetCreateUpdateForm(OrgModelForm):
             ]
         nodes_field.choices = nodes_choices
 
-    @staticmethod
-    def sorted_platform(platform):
-        if platform['base'] == 'Other':
-            return 'zz'
-        return platform['base']
-
     def set_platform_to_name(self):
-        choices = []
-        platforms = Platform.objects.all().values('name', 'base')
-        platforms_sorted = sorted(platforms, key=self.sorted_platform)
-        platforms_grouped = groupby(platforms_sorted, key=lambda x: x['base'])
-        for i in platforms_grouped:
-            base = i[0]
-            grouped = sorted(i[1], key=lambda x: x['name'])
-            grouped = [(j['name'], j['name']) for j in grouped]
-            choices.append(
-                (base, grouped)
-            )
         platform_field = self.fields['platform']
-        platform_field.choices = choices
+        platform_field.to_field_name = 'name'
         if self.instance:
             self.initial['platform'] = self.instance.platform.name
 

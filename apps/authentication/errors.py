@@ -11,7 +11,6 @@ from users.utils import (
 
 reason_password_failed = 'password_failed'
 reason_mfa_failed = 'mfa_failed'
-reason_mfa_unset = 'mfa_unset'
 reason_user_not_exist = 'user_not_exist'
 reason_password_expired = 'password_expired'
 reason_user_invalid = 'user_invalid'
@@ -19,8 +18,7 @@ reason_user_inactive = 'user_inactive'
 
 reason_choices = {
     reason_password_failed: _('Username/password check failed'),
-    reason_mfa_failed: _('MFA failed'),
-    reason_mfa_unset: _('MFA unset'),
+    reason_mfa_failed: _('MFA authentication failed'),
     reason_user_not_exist: _("Username does not exist"),
     reason_password_expired: _("Password expired"),
     reason_user_invalid: _('Disabled or expired'),
@@ -48,7 +46,6 @@ block_login_msg = _(
 mfa_failed_msg = _("MFA code invalid, or ntp sync server time")
 
 mfa_required_msg = _("MFA required")
-mfa_unset_msg = _("MFA not set, please set it first")
 login_confirm_required_msg = _("Login confirm required")
 login_confirm_wait_msg = _("Wait login confirm ticket for accept")
 login_confirm_error_msg = _("Login confirm ticket was {}")
@@ -93,9 +90,6 @@ class AuthFailedError(Exception):
             'msg': self.msg,
         }
 
-    def __str__(self):
-        return str(self.msg)
-
 
 class CredentialError(AuthFailedNeedLogMixin, AuthFailedNeedBlockMixin, AuthFailedError):
     def __init__(self, error, username, ip, request):
@@ -120,16 +114,6 @@ class MFAFailedError(AuthFailedNeedLogMixin, AuthFailedError):
 
     def __init__(self, username, request):
         super().__init__(username=username, request=request)
-
-
-class MFAUnsetError(AuthFailedNeedLogMixin, AuthFailedError):
-    error = reason_mfa_unset
-    msg = mfa_unset_msg
-
-    def __init__(self, user, request, url):
-        super().__init__(username=user.username, request=request)
-        self.user = user
-        self.url = url
 
 
 class BlockLoginError(AuthFailedNeedBlockMixin, AuthFailedError):
@@ -171,7 +155,7 @@ class MFARequiredError(NeedMoreInfoError):
             'error': self.error,
             'msg': self.msg,
             'data': {
-                'choices': ['code'],
+                'choices': ['otp'],
                 'url': reverse('api-auth:mfa-challenge')
             }
         }

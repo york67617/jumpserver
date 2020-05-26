@@ -18,3 +18,4 @@ def get_current_request():
 
 
 current_request = LocalProxy(partial(_find, 'current_request'))
+

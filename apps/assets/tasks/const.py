@@ -18,18 +18,15 @@ UPDATE_ASSETS_HARDWARE_TASKS = [
    }
 ]
 
-ASSET_ADMIN_CONN_CACHE_KEY = "ASSET_ADMIN_USER_CONN_{}"
-
-SYSTEM_USER_CONN_CACHE_KEY = "SYSTEM_USER_CONN_{}"
-PING_UNIXLIKE_TASKS = [
-   {
-       "name": "ping",
-       "action": {
-           "module": "ping",
-       }
-   }
+TEST_ADMIN_USER_CONN_TASKS = [
+    {
+        "name": "ping",
+        "action": {
+            "module": "ping",
+        }
+    }
 ]
-PING_WINDOWS_TASKS = [
+TEST_WINDOWS_ADMIN_USER_CONN_TASKS = [
     {
         "name": "ping",
         "action": {
@@ -37,6 +34,44 @@ PING_WINDOWS_TASKS = [
         }
     }
 ]
+
+ASSET_ADMIN_CONN_CACHE_KEY = "ASSET_ADMIN_USER_CONN_{}"
+
+SYSTEM_USER_CONN_CACHE_KEY = "SYSTEM_USER_CONN_{}"
+TEST_SYSTEM_USER_CONN_TASKS = [
+   {
+       "name": "ping",
+       "action": {
+           "module": "ping",
+       }
+   }
+]
+TEST_WINDOWS_SYSTEM_USER_CONN_TASKS = [
+    {
+        "name": "ping",
+        "action": {
+            "module": "win_ping",
+        }
+    }
+]
+
+TEST_ASSET_USER_CONN_TASKS = [
+    {
+        "name": "ping",
+        "action": {
+            "module": "ping",
+        }
+    }
+]
+TEST_WINDOWS_ASSET_USER_CONN_TASKS = [
+    {
+        "name": "ping",
+        "action": {
+            "module": "win_ping",
+        }
+    }
+]
+
 
 TASK_OPTIONS = {
     'timeout': 10,
@@ -63,9 +98,7 @@ GATHER_ASSET_USERS_TASKS = [
         "name": "get last login",
         "action": {
             "module": "shell",
-            "args": "users=$(getent passwd | grep -v 'nologin' | "
-                    "grep -v 'shudown' | awk -F: '{ print $1 }');for i in $users;do last -F $i -1 | "
-                    "head -1 | grep -v '^$'  | awk '{ print $1\"@\"$3\"@\"$5,$6,$7,$8 }';done"
+            "args": "users=$(getent passwd | grep -v 'nologin' | grep -v 'shudown' | awk -F: '{ print $1 }');for i in $users;do last -F $i -1 |  head -1 | grep -v '^$'  | awk '{ print $1\"@\"$3\"@\"$5,$6,$7,$8 }';done"
         }
     }
 ]

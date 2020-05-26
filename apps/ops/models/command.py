@@ -11,12 +11,11 @@ from django.db import models
 
 
 from orgs.models import Organization
-from orgs.mixins.models import OrgModelMixin
 from ..ansible.runner import CommandRunner
 from ..inventory import JMSInventory
 
 
-class CommandExecution(OrgModelMixin):
+class CommandExecution(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     hosts = models.ManyToManyField('assets.Asset')
     run_as = models.ForeignKey('assets.SystemUser', on_delete=models.CASCADE)
@@ -33,12 +32,7 @@ class CommandExecution(OrgModelMixin):
 
     @property
     def inventory(self):
-        if self.run_as.username_same_with_user:
-            username = self.user.username
-        else:
-            username = self.run_as.username
-        inv = JMSInventory(self.hosts.all(), run_as=username)
-        return inv
+        return JMSInventory(self.hosts.all(), run_as=self.run_as.username)
 
     @property
     def result(self):
@@ -86,7 +80,6 @@ class CommandExecution(OrgModelMixin):
             msg = _("Command `{}` is forbidden ........").format(self.command)
             print('\033[31m' + msg + '\033[0m')
             self.result = {"error":  msg}
-        self.org_id = self.run_as.org_id
         self.is_finished = True
         self.date_finished = timezone.now()
         self.save()

@@ -58,9 +58,7 @@ class AssetByNodeFilterBackend(filters.BaseFilterBackend):
         if query_all:
             pattern = node.get_all_children_pattern(with_self=True)
         else:
-            # pattern = node.get_children_key_pattern(with_self=True)
-            # 只显示当前节点下资产
-            pattern = r"^{}$".format(node.key)
+            pattern = node.get_children_key_pattern(with_self=True)
         return self.perform_query(pattern, queryset)
 
 

@@ -117,6 +117,13 @@ class ReplayStorageCephForm(BaseReplayStorageForm):
     )
     ceph_endpoint = forms.CharField(
         max_length=128, label=_('Endpoint'), required=False,
+        help_text=_(
+            """
+            S3: http://s3.{REGION_NAME}.amazonaws.com <br>
+            S3(China): http://s3.{REGION_NAME}.amazonaws.com.cn <br>
+            Example: http://s3.cn-north-1.amazonaws.com.cn
+            """
+        )
     )
 
 
@@ -137,12 +144,6 @@ class ReplayStorageSwiftForm(BaseReplayStorageForm):
     )
     swift_endpoint = forms.CharField(
         max_length=128, label=_('Endpoint'), required=False,
-    )
-    swift_protocol = forms.ChoiceField(
-        choices=(
-            ('HTTP', 'http'),
-            ('HTTPS', 'https')
-        ), initial='http', label=_('Protocol'), required=True,
     )
 
 

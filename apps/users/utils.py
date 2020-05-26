@@ -1,5 +1,6 @@
 # ~*~ coding: utf-8 ~*~
 #
+from __future__ import unicode_literals
 import os
 import re
 import pyotp
@@ -13,8 +14,7 @@ from django.core.cache import cache
 from datetime import datetime
 
 from common.tasks import send_mail_async
-from common.utils import reverse, get_object_or_none
-from .models import User
+from common.utils import reverse
 
 
 logger = logging.getLogger('jumpserver')
@@ -193,15 +193,32 @@ def send_reset_ssh_key_mail(user):
     send_mail_async.delay(subject, message, recipient_list, html_message=message)
 
 
-def get_user_or_pre_auth_user(request):
+def get_user_or_tmp_user(request):
     user = request.user
+    tmp_user = get_tmp_user_from_cache(request)
     if user.is_authenticated:
         return user
-    pre_auth_user_id = request.session.get('user_id')
-    user = None
-    if pre_auth_user_id:
-        user = get_object_or_none(User, pk=pre_auth_user_id)
+    elif tmp_user:
+        return tmp_user
+    else:
+        raise Http404("Not found this user")
+
+
+def get_tmp_user_from_cache(request):
+    if not request.session.session_key:
+        return None
+    user = cache.get(request.session.session_key+'user')
     return user
+
+
+def set_tmp_user_to_cache(request, user, ttl=3600):
+    cache.set(request.session.session_key+'user', user, ttl)
+
+
+def delete_tmp_user_for_cache(request):
+    if not request.session.session_key:
+        return None
+    cache.delete(request.session.session_key+'user')
 
 
 def redirect_user_first_login_or_index(request, redirect_field_name):
@@ -214,13 +231,15 @@ def redirect_user_first_login_or_index(request, redirect_field_name):
     return url_in_get
 
 
-def generate_otp_uri(username, otp_secret_key=None, issuer="JumpServer"):
-    if otp_secret_key is None:
+def generate_otp_uri(request, issuer="Jumpserver"):
+    user = get_user_or_tmp_user(request)
+    otp_secret_key = cache.get(request.session.session_key+'otp_key', '')
+    if not otp_secret_key:
         otp_secret_key = base64.b32encode(os.urandom(10)).decode('utf-8')
+    cache.set(request.session.session_key+'otp_key', otp_secret_key, 600)
     totp = pyotp.TOTP(otp_secret_key)
     otp_issuer_name = settings.OTP_ISSUER_NAME or issuer
-    uri = totp.provisioning_uri(name=username, issuer_name=otp_issuer_name)
-    return uri, otp_secret_key
+    return totp.provisioning_uri(name=user.username, issuer_name=otp_issuer_name), otp_secret_key
 
 
 def check_otp_code(otp_secret_key, otp_code):
@@ -330,6 +349,4 @@ def get_source_choices():
         choices.append((User.SOURCE_OPENID, choices_all[User.SOURCE_OPENID]))
     if settings.AUTH_RADIUS:
         choices.append((User.SOURCE_RADIUS, choices_all[User.SOURCE_RADIUS]))
-    if settings.AUTH_CAS:
-        choices.append((User.SOURCE_CAS, choices_all[User.SOURCE_CAS]))
     return choices

@@ -13,10 +13,10 @@ __all__ = ['SecuritySettingForm']
 class SecuritySettingForm(BaseForm):
     # MFA global setting
     SECURITY_MFA_AUTH = forms.BooleanField(
-        required=False, label=_("MFA"),
+        required=False, label=_("MFA Secondary certification"),
         help_text=_(
-            'After opening, all user login must use MFA'
-            '(valid for all users, including administrators)'
+            'After opening, the user login must use MFA secondary '
+            'authentication (valid for all users, including administrators)'
         )
     )
     # Execute commands for user

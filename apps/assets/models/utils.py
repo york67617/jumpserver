@@ -77,7 +77,7 @@ class Connectivity:
         return cls(cls.UNKNOWN, timezone.now())
 
     @classmethod
-    def set(cls, key, value, ttl=None):
+    def set(cls, key, value, ttl=0):
         cache.set(key, value, ttl)
 
     @classmethod

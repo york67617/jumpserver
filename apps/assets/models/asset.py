@@ -14,7 +14,6 @@ from django.utils.translation import ugettext_lazy as _
 from common.fields.model import JsonDictTextField
 from common.utils import lazyproperty
 from orgs.mixins.models import OrgModelMixin, OrgManager
-from .base import ConnectivityMixin
 from .utils import Connectivity
 
 __all__ = ['Asset', 'ProtocolsMixin', 'Platform']
@@ -244,13 +243,6 @@ class Asset(ProtocolsMixin, NodesRelationMixin, OrgModelMixin):
     def platform_base(self):
         return self.platform.base
 
-    @lazyproperty
-    def admin_user_username(self):
-        """求可连接性时，直接用用户名去取，避免再查一次admin user
-        serializer 中直接通过annotate方式返回了这个
-        """
-        return self.admin_user.username
-
     def is_windows(self):
         return self.platform.is_windows()
 
@@ -283,11 +275,9 @@ class Asset(ProtocolsMixin, NodesRelationMixin, OrgModelMixin):
     def connectivity(self):
         if self._connectivity:
             return self._connectivity
-        if not self.admin_user_username:
+        if not self.admin_user:
             return Connectivity.unknown()
-        connectivity = ConnectivityMixin.get_asset_username_connectivity(
-            self, self.admin_user_username
-        )
+        connectivity = self.admin_user.get_asset_connectivity(self)
         return connectivity
 
     @connectivity.setter
@@ -300,7 +290,7 @@ class Asset(ProtocolsMixin, NodesRelationMixin, OrgModelMixin):
         if not self.admin_user:
             return {}
 
-        self.admin_user.load_asset_special_auth(self)
+        self.admin_user.load_specific_asset_auth(self)
         info = {
             'username': self.admin_user.username,
             'password': self.admin_user.password,

@@ -1,3 +1,4 @@
+import copy
 import os
 
 from django.urls import reverse_lazy
@@ -48,11 +49,9 @@ INSTALLED_APPS = [
     'authentication.apps.AuthenticationConfig',  # authentication
     'applications.apps.ApplicationsConfig',
     'tickets.apps.TicketsConfig',
-    'jms_oidc_rp',
     'rest_framework',
     'rest_framework_swagger',
     'drf_yasg',
-    'django_cas_ng',
     'channels',
     'django_filters',
     'bootstrap3',
@@ -64,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "django_elasticsearch_dsl"
 ]
 
 
@@ -76,8 +76,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'jms_oidc_rp.middleware.OIDCRefreshIDTokenMiddleware',
-    'django_cas_ng.middleware.CASMiddleware',
+    'authentication.backends.openid.middleware.OpenIDAuthenticationMiddleware',
     'jumpserver.middleware.TimezoneMiddleware',
     'jumpserver.middleware.DemoMiddleware',
     'jumpserver.middleware.RequestMiddleware',
@@ -104,7 +103,6 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 'jumpserver.context_processor.jumpserver_processor',
                 'orgs.context_processor.org_processor',
-                'jms_oidc_rp.context_processors.oidc',
             ],
         },
     },
@@ -224,6 +222,8 @@ EMAIL_USE_SSL = DYNAMIC.EMAIL_USE_SSL
 EMAIL_USE_TLS = DYNAMIC.EMAIL_USE_TLS
 
 
+AUTHENTICATION_BACKENDS = DYNAMIC.AUTHENTICATION_BACKENDS
+
 # Custom User Auth model
 AUTH_USER_MODEL = 'users.User'
 
@@ -234,8 +234,7 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 # Cache use redis
 CACHES = {
     'default': {
-        # 'BACKEND': 'redis_cache.RedisCache',
-        'BACKEND': 'redis_lock.django_cache.RedisCache',
+        'BACKEND': 'redis_cache.RedisCache',
         'LOCATION': 'redis://:%(password)s@%(host)s:%(port)s/%(db)s' % {
             'password': CONFIG.REDIS_PASSWORD,
             'host': CONFIG.REDIS_HOST,
@@ -245,6 +244,19 @@ CACHES = {
     }
 }
 
+# elasticsearch
+
+
+def dict_filter(d):
+    cd = copy.deepcopy(d)
+    cd.pop("name")
+    return cd
+
+ELASTICSEARCH_DSL = {
+    config['name']: dict_filter(config) for config in CONFIG.ELASTICSEARCH_CONFIGUTATIONS
+}
+
 
 FORCE_SCRIPT_NAME = CONFIG.FORCE_SCRIPT_NAME
+
 

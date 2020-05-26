@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 
-from django.urls import re_path, path
+from django.urls import re_path
 from rest_framework.routers import DefaultRouter
 
 from common import api as capi
@@ -24,7 +24,6 @@ old_version_urlpatterns = [
 ]
 
 urlpatterns = [
-    path('<uuid:pk>/users/all/', api.OrgAllUserListApi.as_view(), name='org-all-users'),
 ]
 
 urlpatterns += router.urls + old_version_urlpatterns

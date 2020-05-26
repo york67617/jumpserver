@@ -43,12 +43,11 @@ class UserForgotPasswordView(FormView):
         user = get_object_or_none(User, email=email)
         if not user:
             error = _('Email address invalid, please input again')
-            form.add_error('email', error)
-            return self.form_invalid(form)
+            return self.get(request, errors=error)
         elif not user.can_update_password():
-            error = _('User auth from {}, go there change password')
-            form.add_error('email', error.format(user.get_source_display()))
-            return self.form_invalid(form)
+            error = _('User auth from {}, go there change password'.format(
+                user.source))
+            return self.get(request, errors=error)
         else:
             send_reset_password_mail(user)
             return redirect('users:forgot-password-sendmail-success')
@@ -108,21 +107,17 @@ class UserResetPasswordView(FormView):
         token = self.request.GET.get('token')
         user = User.validate_reset_password_token(token)
         if not user:
-            error = _('Token invalid or expired')
-            form.add_error('new_password', error)
-            return self.form_invalid(form)
+            return self.get(self.request, errors=_('Token invalid or expired'))
 
         if not user.can_update_password():
-            error = _('User auth from {}, go there change password')
-            form.add_error('new_password', error.format(user.get_source_display()))
-            return self.form_invalid(form)
+            errors = _('User auth from {}, go there change password'.format(user.source))
+            return self.get(self.request, errors=errors)
 
         password = form.cleaned_data['new_password']
         is_ok = check_password_rules(password)
         if not is_ok:
-            error = _('* Your password does not meet the requirements')
-            form.add_error('new_password', error)
-            return self.form_invalid(form)
+            errors = _('* Your password does not meet the requirements')
+            return self.get(self.request, errors=errors)
 
         user.reset_password(password)
         User.expired_reset_password_token(token)

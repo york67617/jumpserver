@@ -35,7 +35,6 @@ REPLAY_STORAGE_TYPE_SWIFT_FIELDS = [
     {'name': 'SECRET_KEY', 'write_only': True},
     {'name': 'REGION'},
     {'name': 'ENDPOINT'},
-    {'name': 'PROTOCOL'},
 ]
 REPLAY_STORAGE_TYPE_OSS_FIELDS = [
     {'name': 'BUCKET'},

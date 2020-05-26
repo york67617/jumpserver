@@ -1,0 +1,22 @@
+{% load i18n static %}
+
+<!doctype html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>es app</title>
+</head>
+<body>
+
+<div><p>用户名: {{ user.name }}</p></div>
+<div><p>用户id: {{ user.id }}</p></div>
+<div><p>test: {{ test1 }}</p></div>
+
+{% block custom_head_css_js %}
+    <script src="{% static 'js/jquery.form.min.js' %}"></script>
+{% endblock %}
+</body>
+</html>

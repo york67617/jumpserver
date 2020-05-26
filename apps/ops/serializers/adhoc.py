@@ -3,14 +3,14 @@ from __future__ import unicode_literals
 from rest_framework import serializers
 from django.shortcuts import reverse
 
-from ..models import Task, AdHoc, AdHocExecution, CommandExecution
+from ..models import Task, AdHoc, AdHocRunHistory, CommandExecution
 
 
-class AdHocExecutionSerializer(serializers.ModelSerializer):
+class AdHocRunHistorySerializer(serializers.ModelSerializer):
     stat = serializers.SerializerMethodField()
 
     class Meta:
-        model = AdHocExecution
+        model = AdHocRunHistory
         fields = '__all__'
 
     @staticmethod
@@ -19,13 +19,10 @@ class AdHocExecutionSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_stat(obj):
-        count_failed_hosts = len(obj.failed_hosts)
-        count_success_hosts = len(obj.success_hosts)
-        count_total = count_success_hosts + count_failed_hosts
         return {
-            "total": count_total,
-            "success": count_success_hosts,
-            "failed": count_failed_hosts
+            "total": obj.hosts_amount,
+            "success": len(obj.summary.get("contacted", [])),
+            "failed": len(obj.summary.get("dark", [])),
         }
 
     def get_field_names(self, declared_fields, info):
@@ -34,7 +31,7 @@ class AdHocExecutionSerializer(serializers.ModelSerializer):
         return fields
 
 
-class AdHocExecutionExcludeResultSerializer(AdHocExecutionSerializer):
+class AdHocRunHistoryExcludeResultSerializer(AdHocRunHistorySerializer):
     def get_field_names(self, declared_fields, info):
         fields = super().get_field_names(declared_fields, info)
         fields = [i for i in fields if i not in ['result', 'summary']]
@@ -42,20 +39,19 @@ class AdHocExecutionExcludeResultSerializer(AdHocExecutionSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
-    summary = serializers.ReadOnlyField(source='history_summary')
-    latest_execution = AdHocExecutionExcludeResultSerializer(read_only=True)
+    latest_history = AdHocRunHistoryExcludeResultSerializer(read_only=True)
 
     class Meta:
         model = Task
         fields = [
             'id', 'name', 'interval', 'crontab', 'is_periodic',
-            'is_deleted', 'comment', 'date_created',
-            'date_updated', 'latest_execution', 'summary',
+            'is_deleted', 'comment', 'created_by', 'date_created',
+            'date_updated', 'latest_history',
         ]
         read_only_fields = [
-            'is_deleted', 'date_created', 'date_updated',
-            'latest_adhoc', 'latest_execution', 'total_run_amount',
-            'success_run_amount', 'summary',
+            'is_deleted', 'created_by', 'date_created', 'date_updated',
+            'latest_adhoc', 'latest_history', 'total_run_amount',
+            'success_run_amount',
         ]
 
 
@@ -67,11 +63,11 @@ class AdHocSerializer(serializers.ModelSerializer):
         fields = [
             "id", "task", 'tasks', "pattern", "options",
             "hosts", "run_as_admin", "run_as", "become",
-            "date_created", "short_id",
+            "created_by", "date_created", "short_id",
             "become_display",
         ]
         read_only_fields = [
-            'date_created'
+            'created_by', 'date_created'
         ]
         extra_kwargs = {
             "become": {'write_only': True}

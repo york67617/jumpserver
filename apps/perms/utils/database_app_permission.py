@@ -1,10 +1,9 @@
 # coding: utf-8
 #
 
-from django.utils.translation import ugettext as _
 from django.db.models import Q
-
 from orgs.utils import set_to_root_org
+
 from ..models import DatabaseAppPermission
 from common.tree import TreeNode
 from applications.models import DatabaseApp
@@ -57,7 +56,7 @@ class DatabaseAppPermissionUtil:
     def get_database_apps(self):
         database_apps = DatabaseApp.objects.filter(
             granted_by_permissions__in=self.permissions
-        ).distinct()
+        )
         return database_apps
 
     def get_database_app_system_users(self, database_app):
@@ -74,7 +73,7 @@ class DatabaseAppPermissionUtil:
 def construct_database_apps_tree_root():
     tree_root = {
         'id': 'ID_DATABASE_APP_ROOT',
-        'name': _('DatabaseApp'),
+        'name': 'DatabaseApp',
         'title': 'DatabaseApp',
         'pId': '',
         'open': False,

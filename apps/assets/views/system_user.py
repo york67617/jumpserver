@@ -17,7 +17,6 @@ __all__ = [
     'SystemUserCreateView', 'SystemUserUpdateView',
     'SystemUserDetailView', 'SystemUserDeleteView',
     'SystemUserAssetView', 'SystemUserListView',
-    'SystemUserUserView',
 ]
 
 
@@ -101,22 +100,7 @@ class SystemUserAssetView(PermissionsMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = {
             'app': _('assets'),
-            'action': _('System user assets'),
-        }
-        kwargs.update(context)
-        return super().get_context_data(**kwargs)
-
-
-class SystemUserUserView(PermissionsMixin, DetailView):
-    model = SystemUser
-    template_name = 'assets/system_user_users.html'
-    context_object_name = 'system_user'
-    permission_classes = [IsOrgAdmin]
-
-    def get_context_data(self, **kwargs):
-        context = {
-            'app': _('assets'),
-            'action': _('System user users'),
+            'action': _('System user asset'),
         }
         kwargs.update(context)
         return super().get_context_data(**kwargs)
