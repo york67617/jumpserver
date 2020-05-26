@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.utils import timezone
 from orgs.mixins.models import OrgModelMixin
 
-from common.utils import date_expired_default, lazyproperty
+from common.utils import date_expired_default
 from orgs.mixins.models import OrgManager
 
 
@@ -105,10 +105,10 @@ class BasePermission(OrgModelMixin):
         ).distinct()
         return users
 
-    @lazyproperty
+    @property
     def users_amount(self):
         return self.users.count()
 
-    @lazyproperty
+    @property
     def user_groups_amount(self):
         return self.user_groups.count()

@@ -2,10 +2,8 @@
 #
 
 from rest_framework.views import Response
-from rest_framework.decorators import action
 
 from common.permissions import IsOrgAdmin
-from common.const.http import GET
 from orgs.mixins.api import OrgModelViewSet
 from orgs.mixins import generics
 from ..models import RemoteAppPermission
@@ -13,9 +11,7 @@ from ..serializers import (
     RemoteAppPermissionSerializer,
     RemoteAppPermissionUpdateUserSerializer,
     RemoteAppPermissionUpdateRemoteAppSerializer,
-    PermissionAllUserSerializer,
 )
-
 
 __all__ = [
     'RemoteAppPermissionViewSet',
@@ -30,20 +26,6 @@ class RemoteAppPermissionViewSet(OrgModelViewSet):
     search_fields = filter_fields
     serializer_class = RemoteAppPermissionSerializer
     permission_classes = (IsOrgAdmin,)
-
-    def get_serializer_class(self):
-        if self.action == 'all_users':
-            return PermissionAllUserSerializer
-        else:
-            return super().get_serializer_class()
-
-    @action(methods=[GET], detail=True, url_path='users/all')
-    def all_users(self, request, *args, **kwargs):
-        obj = self.get_object()
-        users = obj.all_users.only(
-            *self.get_serializer_class().Meta.only_fields
-        )
-        return self.action_list(users)
 
 
 class RemoteAppPermissionAddUserApi(generics.RetrieveUpdateAPIView):
