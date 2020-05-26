@@ -32,14 +32,14 @@ class RemoteAppPermissionSerializer(BulkOrgResourceModelSerializer):
         fields = small_fields + m2m_fields
         read_only_fields = ['created_by', 'date_created']
 
-    @classmethod
-    def setup_eager_loading(cls, queryset):
-        """ Perform necessary eager loading of data. """
-        queryset = queryset.annotate(
-            users_amount=Count('users'), user_groups_amount=Count('user_groups'),
-            remote_apps_amount=Count('remote_apps'),  system_users_amount=Count('system_users')
-        )
-        return queryset
+    # @classmethod
+    # def setup_eager_loading(cls, queryset):
+    #     """ Perform necessary eager loading of data. """
+    #     queryset = queryset.annotate(
+    #         users_amount=Count('users'), user_groups_amount=Count('user_groups'),
+    #         remote_apps_amount=Count('remote_apps'),  system_users_amount=Count('system_users')
+    #     )
+    #     return queryset
 
 
 class RemoteAppPermissionUpdateUserSerializer(serializers.ModelSerializer):
